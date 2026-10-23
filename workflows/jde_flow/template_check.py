@@ -34,7 +34,7 @@ def recalculate_file(path, engine="Excel.Application"):
                 pythoncom.CoUninitialize()
 
 
-def check_sheet(sheet, tolerance="0.00"):
+def check_sheet(sheet, tolerance="0.00", audit=None):
     """定位表头、合计、分录和 Check 记录，不依赖固定数据行数。"""
     def label(value):
         return re.sub(r"\s+", "", str(value)) if value is not None else ""
@@ -89,6 +89,20 @@ def check_sheet(sheet, tolerance="0.00"):
         return {"核对项": name, "左值": str(left), "右值": str(right),
                 "差额": str(delta), "容差": str(limit), "通过": abs(delta) <= limit,
                 "位置": locations}
+    if audit is not None:
+        original = sheet
+        try:
+            sheet = audit
+            taxable, moh = number(11, 14), number(12, 14)
+            difference = number(14, 14)
+        finally:
+            sheet = original
+        return [result("税额合计=借项汇总", tax, debit,
+                       {"税额合计": sheet.cell(total.row, bu_col+2).coordinate, "借项行": debit_rows}),
+                result("收入合计=审核计税收入+MOH", income, taxable + moh,
+                       {"审核计税收入": audit.title + "!N11", "MOH": audit.title + "!N12"}),
+                result("审核差额=0", difference, Decimal(0), {"差额": audit.title + "!N14"}),
+                result("Check合计=Check明细汇总", check_total, check_details, {"Check明细行": check_rows})]
     return [result("税额合计=借项汇总", tax, debit,
                    {"税额合计": sheet.cell(total.row, bu_col+2).coordinate, "借项行": debit_rows}),
             result("收入合计=Check取反", income, -check_total,

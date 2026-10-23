@@ -13,6 +13,12 @@ def text(value):
 
 
 def update_workbook(book, include_children=False):
+    """新版模板以 Check 筛选条件为输入；旧版缺少条件时明确拒绝。"""
+    from workflows.jde_flow.check_update import update_from_check
+    return update_from_check(book, include_children)
+
+
+def update_legacy(book, include_children=False):
     audit = book["房产税（从租）审核底稿"]
     ledger = book["JDE明细账"]
     calc = book["房产税（从租）计算底稿"]

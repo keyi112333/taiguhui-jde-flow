@@ -164,6 +164,22 @@ class PropertyTaxFlow:
         book = openpyxl.load_workbook(path)
         temp_path = None
         try:
+            report_path = self.context.get("jde_r55gl1005_path") or self.get("R55GL1005文件")
+            if not report_path:
+                raise PendingModule("R55GL1005 导出待录制；请配置 房产税配置.R55GL1005文件，避免使用模板历史报表")
+            report_path = Path(report_path)
+            if not report_path.is_absolute():
+                report_path = self.config.get_path("input") / report_path
+            report = openpyxl.load_workbook(report_path, data_only=True)
+            try:
+                source_sheet = report[self.get("R55GL1005工作表") or report.sheetnames[0]]
+                if "R55GL1005" in book.sheetnames:
+                    book.remove(book["R55GL1005"])
+                destination = book.create_sheet("R55GL1005")
+                for row in source_sheet.iter_rows(values_only=True):
+                    destination.append(row)
+            finally:
+                report.close()
             records = update_workbook(book, include_children=mode == "包含子科目")
             book.calculation = CalcProperties(fullCalcOnLoad=True, forceFullCalc=True)
             with NamedTemporaryFile(dir=Path(path).parent, suffix=".xlsx", delete=False) as tmp:
@@ -184,7 +200,8 @@ class PropertyTaxFlow:
             book = openpyxl.load_workbook(path, data_only=True)
             try:
                 results = check_sheet(book["房产税（从租）计算底稿"],
-                                      tolerance=self.get("核对容差", "0.00"))
+                                      tolerance=self.get("核对容差", "0.00"),
+                                      audit=book["房产税（从租）审核底稿"] if "R55GL1005" in book.sheetnames else None)
             finally:
                 book.close()
             passed = all(item["通过"] for item in results)

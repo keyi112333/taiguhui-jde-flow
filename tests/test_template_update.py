@@ -1,6 +1,6 @@
 import unittest
 import openpyxl
-from workflows.jde_flow.template_update import update_workbook
+from workflows.jde_flow.template_update import update_legacy as update_workbook
 
 
 class TemplateUpdateTests(unittest.TestCase):
